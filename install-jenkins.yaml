@@ -1,0 +1,65 @@
+---
+  - hosts: '{{ host }}'
+    user: ubuntu
+    become: yes
+    become_user: root
+    gather_facts: no
+
+    pre_tasks:
+      - name: 'install python2'
+        raw: apt-get -y install python
+
+    tasks:
+    
+      - name: Set timezone to America/Sao_Paulo
+        timezone:
+          name: America/Sao_Paulo
+ 
+      #- name: Downloading key
+      #  command: wget https://pkg.jenkins.io/debian/jenkins-ci.org.key
+      #  register: output
+
+      - name: Downloading key
+        get_url:
+          url: https://pkg.jenkins.io/debian/jenkins-ci.org.key
+          dest: /home/ubuntu/jenkins-ci.org.key
+
+      - name: Adding key to repository
+        command: apt-key add /home/ubuntu/jenkins-ci.org.key
+        register: output2
+
+      - debug:
+          var: output2.stdout
+
+      - name: Copying jenkins list '{{ host }}'
+        copy:
+          src: /etc/ansible/playbooks/files/jenkins.list
+          dest: /etc/apt/sources.list.d/jenkins.list
+
+      - name: Update cache
+        apt:
+          update_cache: yes
+
+      - name: Installing openjdk-8-jdk on host '{{ host }}'
+        apt:
+          pkg: openjdk-8-jdk
+
+      - name: Installing openjdk-8-jre on host '{{ host }}'
+        apt:
+          pkg: openjdk-8-jre
+
+      - name: Set timezone to jeknins
+        shell: "echo $JAVA_ARGS"
+        environment:
+          JAVA_ARGS: -Dorg.apache.commons.jelly.tags.fmt.timeZone=America/Sao_Paulo
+
+      - name: Installing jenkins on host '{{ host }}'
+        apt:
+          pkg: jenkins
+
+      - name: Get initial pass
+        command: cat /var/lib/jenkins/secrets/initialAdminPassword
+        register: adminpass
+    
+      - debug:
+          var: adminpass.stdout
